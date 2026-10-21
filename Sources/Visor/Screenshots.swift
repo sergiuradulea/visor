@@ -1,18 +1,18 @@
 import AppKit
 import SwiftUI
 
-/// `swift run -c release Visor --screenshots docs/screenshots`
+/// `swift run -c release Visor --screenshots docs/screenshots [--artwork cover.jpg]`
 /// Renders the real views offscreen with made-up demo data, for the README. Refuses to run
 /// from the .app so it can never touch a real install's settings.
 enum Screenshots {
-    static func run(into dir: URL) {
+    static func run(into dir: URL, artwork coverFile: URL? = nil) {
         guard Bundle.main.bundleIdentifier == nil else {
             fputs("Run --screenshots from `swift run`, not from the .app\n", stderr)
             exit(1)
         }
         try? FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
         let samples = FileManager.default.temporaryDirectory.appendingPathComponent("visor-samples", isDirectory: true)
-        seedDemoData(samples)
+        seedDemoData(samples, cover: coverFile.flatMap { NSImage(contentsOf: $0) })
 
         let state = NotchState.shared
         state.notchSize = CGSize(width: 190, height: 32)
@@ -79,14 +79,17 @@ enum Screenshots {
         }
     }
 
-    private static func seedDemoData(_ samples: URL) {
+    private static func seedDemoData(_ samples: URL, cover: NSImage?) {
         try? FileManager.default.createDirectory(at: samples, withIntermediateDirectories: true)
         let art = artwork()
+        // The real cover is passed in with --artwork (not stored in the repo); generated art otherwise.
+        let nowPlaying = cover ?? art
         MediaModel.shared.apply([
-            "bundleId": "com.apple.Music", "title": "Neon Harbor", "artist": "The Night Shift", "album": "Afterglow",
-            "duration": 243.0, "elapsed": 98.0, "rate": 1.0, "playing": true,
+            "bundleId": "com.apple.Music", "title": "Chase The Lights (feat. Marns)", "artist": "Kings Of The Rollers",
+            "album": "Chase The Lights (feat. Marns) - Single",
+            "duration": 227.0, "elapsed": 84.0, "rate": 1.0, "playing": true,
             "timestamp": Date().timeIntervalSince1970,
-            "artwork": art.tiffRepresentation.flatMap { NSBitmapImageRep(data: $0)?.representation(using: .png, properties: [:]) }?.base64EncodedString() ?? NSNull(),
+            "artwork": nowPlaying.tiffRepresentation.flatMap { NSBitmapImageRep(data: $0)?.representation(using: .png, properties: [:]) }?.base64EncodedString() ?? NSNull(),
         ])
 
         let png = samples.appendingPathComponent("Hero shot.png")

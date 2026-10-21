@@ -17,7 +17,9 @@ let delegate = AppDelegate()
 app.delegate = delegate
 app.setActivationPolicy(.accessory)
 if let i = CommandLine.arguments.firstIndex(of: "--screenshots"), i + 1 < CommandLine.arguments.count {
-    Screenshots.run(into: URL(fileURLWithPath: CommandLine.arguments[i + 1]))
+    let args = CommandLine.arguments
+    let art = args.firstIndex(of: "--artwork").flatMap { $0 + 1 < args.count ? URL(fileURLWithPath: args[$0 + 1]) : nil }
+    Screenshots.run(into: URL(fileURLWithPath: args[i + 1]), artwork: art)
     exit(0)
 }
 app.run()
