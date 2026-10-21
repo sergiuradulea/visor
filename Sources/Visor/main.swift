@@ -1,0 +1,23 @@
+import AppKit
+
+final class AppDelegate: NSObject, NSApplicationDelegate {
+    func applicationDidFinishLaunching(_ note: Notification) {
+        NotchController.shared.start()
+        MediaModel.shared.start()
+        ClipboardStore.shared.start()
+        MediaKeys.shared.start()
+        Basket.shared.start()
+        TrayStore.shared.watchScreenshots()
+        Downloads.shared.start()
+    }
+}
+
+let app = NSApplication.shared
+let delegate = AppDelegate()
+app.delegate = delegate
+app.setActivationPolicy(.accessory)
+if let i = CommandLine.arguments.firstIndex(of: "--screenshots"), i + 1 < CommandLine.arguments.count {
+    Screenshots.run(into: URL(fileURLWithPath: CommandLine.arguments[i + 1]))
+    exit(0)
+}
+app.run()

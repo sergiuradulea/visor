@@ -1,0 +1,4 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 1024 1024">
+  <!-- Menu-bar strip with the notch hanging from it: outward curves where they meet, rounded bottom. -->
+  <path fill="#000000" d="M0 0 H1024 V72 H762 Q734 72 734 100 V132 Q734 180 686 180 H338 Q290 180 290 132 V100 Q290 72 262 72 H0 Z"/>
+</svg>

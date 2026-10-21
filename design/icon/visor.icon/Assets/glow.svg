@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 1024 1024">
+  <!-- Amber light spilling under the notch. Sits between background and notch. -->
+  <defs>
+    <radialGradient id="glow" cx="512" cy="170" r="430" gradientUnits="userSpaceOnUse" gradientTransform="translate(512 170) scale(1 0.85) translate(-512 -170)">
+      <stop offset="0" stop-color="#FFC15A"/>
+      <stop offset="0.35" stop-color="#F59A3C" stop-opacity="0.85"/>
+      <stop offset="0.7" stop-color="#E0702A" stop-opacity="0.25"/>
+      <stop offset="1" stop-color="#E0702A" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+  <rect width="1024" height="1024" fill="url(#glow)"/>
+</svg>
