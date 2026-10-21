@@ -12,7 +12,7 @@ A home dashboard (battery, AirPods, CPU, memory, Claude Code agents and limits),
 Native Swift + SwiftUI · ~2.1k lines · no dependencies · offline by default · macOS 14+
 
 <a href="https://ponytail.dev"><img src="https://img.shields.io/badge/built%20with-ponytail-111111?style=flat-square" alt="Built with Ponytail"></a>
-<a href="https://buymeacoffee.com/sergiuradulea"><img src="https://img.shields.io/badge/buy%20me%20a%20coffee-FFDD00?style=flat-square&logo=buymeacoffee&logoColor=black" alt="Buy me a coffee"></a>
+<a href="https://buymeacoffee.com/sergiuradulea"><img src="https://img.shields.io/badge/buy%20me%20a%20beer%20🍺-FFDD00?style=flat-square&logo=buymeacoffee&logoColor=black" alt="Buy me a beer"></a>
 <img src="https://img.shields.io/badge/macOS-14%2B-111111?style=flat-square" alt="macOS 14+">
 <img src="https://img.shields.io/badge/license-MIT-111111?style=flat-square" alt="MIT license">
 
@@ -220,7 +220,7 @@ Inspired by notch utilities like [Droppy](https://getdroppy.app), [boring.notch]
 
 ## Support
 
-Visor is free and open source. If it makes your day a little easier, you can [buy me a coffee ☕](https://buymeacoffee.com/sergiuradulea). Bug reports and ideas in [Issues](https://github.com/sergiuradulea/visor/issues) are just as welcome.
+Visor is free and open source. If it makes your day a little easier, you can [buy me a beer 🍺](https://buymeacoffee.com/sergiuradulea). Bug reports and ideas in [Issues](https://github.com/sergiuradulea/visor/issues) are just as welcome.
 
 ## License
 
