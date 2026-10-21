@@ -10,7 +10,7 @@ Visor runs as you, unsandboxed, and may hold **Accessibility** and **Downloads f
 
 | Area | What Visor does | Why it's acceptable / mitigations |
 |---|---|---|
-| **Accessibility** (event tap) | Listens for `NX_SYSDEFINED` events only: volume, mute and brightness keys. | It never receives `keyDown` events, so it cannot log typing. Unhandled keys pass through to macOS unchanged. |
+| **Accessibility** (event tap) | Listens for `NX_SYSDEFINED` events only: volume, mute and brightness keys. | It never receives `keyDown` events, so it cannot log typing. Unhandled keys pass through to macOS unchanged. The tap runs on its own thread and is removed within a second if Accessibility is revoked, so it can't stall system input. |
 | **Permission inheritance** | macOS lets child processes inherit the parent's privacy permissions, and Visor launches its bundled helper. | Install to `/Applications` (admin-owned) rather than running from a user-writable build folder, so other processes can't swap the helper. Don't run builds from untrusted forks. |
 | **`com.apple.` helper bundle ID** | `VisorMedia` uses `com.apple.controlcenter.VisorMedia` so MediaRemote answers it. | It's local-only and signed with your own key; it grants no Apple entitlements. Some endpoint-security tools may flag it, and you can verify the source yourself. |
 | **Clipboard history at rest** | The last 40 clips (≤10 images) are stored as plain JSON in `~/Library/Application Support/Visor/`. | Concealed/transient items (password managers) are skipped. The file is excluded from Time Machine. It's readable by other processes running as you, like any app data. Use **Clear history** after copying something sensitive. |

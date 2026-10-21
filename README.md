@@ -138,6 +138,12 @@ Builds are ad-hoc signed by default, so macOS treats every rebuild as a new app 
 
 `build.sh` picks it up automatically ("Signed with: Visor Dev").
 
+### Troubleshooting
+
+- **Volume keys still show the macOS popup.** Add `/Applications/Visor.app` under System Settings → Privacy & Security → Accessibility. After a rebuild, remove the old entry and add it again (or set up the signing certificate above).
+- **The Mac feels slow or clicks stop working.** Quit Visor (right-click the notch → Quit, or `killall Visor` in Terminal) and update to the latest version. Versions before Oct 21, 2026 could stall input when Accessibility was removed while Visor was running.
+- **Screenshots or downloads don't appear in the tray.** Allow the folder access prompt, or enable it under Privacy & Security → Files & Folders → Visor.
+
 ### Update
 
 ```bash
@@ -162,7 +168,7 @@ tccutil reset All io.github.visor
 |---|---|
 | Notch window | A borderless, non-activating panel above the menu bar. A private SkyLight call puts it on its own always-on-top Space, so it doesn't slide or ghost when you swipe between Spaces. |
 | Now playing | Since macOS 15.4, the private `MediaRemote` framework only answers clients whose bundle ID starts with `com.apple.`. A ~90-line helper (`VisorMedia`) with such an ID streams JSON to the app over a pipe. |
-| Volume / brightness | A session event tap that sees **only** media-key events (`NX_SYSDEFINED`), never ordinary keystrokes. Volume goes through CoreAudio and brightness through the private `DisplayServices` framework. |
+| Volume / brightness | A session event tap that sees **only** media-key events (`NX_SYSDEFINED`), never ordinary keystrokes. It runs on its own thread and removes itself the moment Accessibility is revoked, so it never slows down system input. Volume goes through CoreAudio and brightness through the private `DisplayServices` framework. |
 | Tray | References to your files (paths), never copies. Drag out uses standard file providers. |
 | Screenshots | A Spotlight query for `kMDItemIsScreenCapture`, limited to your screenshot folder. |
 | Downloads | Subscribes to the `NSProgress` objects browsers publish for files in `~/Downloads`, the same mechanism behind Finder's progress bars. |

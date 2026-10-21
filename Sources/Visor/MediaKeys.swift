@@ -6,34 +6,76 @@ import CoreAudio
 /// itself and swallows the key so the system HUD stays hidden and ours shows instead.
 /// Needs Accessibility permission. Keys we can't handle (e.g. HDMI audio with no
 /// software volume) are passed through to macOS.
+///
+/// An active tap sits in the system's input path, so two rules keep it from ever stalling
+/// the Mac: it runs on its own thread (a busy UI can't delay key events), and it is torn
+/// down the moment Accessibility is revoked instead of being re-enabled in a loop.
 final class MediaKeys {
     static let shared = MediaKeys()
     private var tap: CFMachPort?
+    private var source: CFRunLoopSource?
+    private var tapLoop: CFRunLoop?
+    private let lock = NSLock() // tap/source are touched from main and the tap thread
 
     private enum Key: Int { case soundUp = 0, soundDown = 1, brightnessUp = 2, brightnessDown = 3, mute = 7 }
 
     func start() {
         let opts = [kAXTrustedCheckOptionPrompt.takeUnretainedValue() as String: true] as CFDictionary
         _ = AXIsProcessTrustedWithOptions(opts)
-        tryCreateTap()
+        let thread = Thread { [weak self] in
+            self?.tapLoop = CFRunLoopGetCurrent()
+            // Keeps the run loop alive while there is no tap yet.
+            CFRunLoopAddSource(CFRunLoopGetCurrent(), CFRunLoopSourceCreate(nil, 0, &Self.dummyContext), .commonModes)
+            CFRunLoopRun()
+        }
+        thread.name = "Visor.MediaKeys"
+        thread.qualityOfService = .userInteractive
+        thread.start()
+        // Watchdog: create the tap once trusted, remove it as soon as trust is revoked.
+        Timer.scheduledTimer(withTimeInterval: 1, repeats: true) { [weak self] _ in self?.checkTrust() }
     }
 
-    private func tryCreateTap() {
-        let mask = CGEventMask(1) << 14 // NX_SYSDEFINED
+    private static var dummyContext = CFRunLoopSourceContext()
+
+    private func checkTrust() {
+        let trusted = AXIsProcessTrusted()
+        lock.lock(); let hasTap = tap != nil; lock.unlock()
+        if trusted && !hasTap { createTap() }
+        if !trusted && hasTap { removeTap() }
+    }
+
+    private func createTap() {
+        guard let loop = tapLoop else { return }
+        let mask = CGEventMask(1) << 14 // NX_SYSDEFINED only: never ordinary keystrokes
         guard let t = CGEvent.tapCreate(tap: .cgSessionEventTap, place: .headInsertEventTap, options: .defaultTap,
-                                        eventsOfInterest: mask, callback: tapCallback, userInfo: nil) else {
-            // Not trusted yet; retry until the user grants Accessibility.
-            DispatchQueue.main.asyncAfter(deadline: .now() + 3) { [weak self] in self?.tryCreateTap() }
-            return
-        }
-        tap = t
-        CFRunLoopAddSource(CFRunLoopGetMain(), CFMachPortCreateRunLoopSource(nil, t, 0), .commonModes)
+                                        eventsOfInterest: mask, callback: tapCallback, userInfo: nil) else { return }
+        let src = CFMachPortCreateRunLoopSource(nil, t, 0)
+        lock.lock(); tap = t; source = src; lock.unlock()
+        CFRunLoopAddSource(loop, src, .commonModes)
+        CFRunLoopWakeUp(loop)
         CGEvent.tapEnable(tap: t, enable: true)
     }
 
-    fileprivate func reenable() { if let tap { CGEvent.tapEnable(tap: tap, enable: true) } }
+    fileprivate func removeTap() {
+        lock.lock()
+        let t = tap, src = source
+        tap = nil; source = nil
+        lock.unlock()
+        if let t { CGEvent.tapEnable(tap: t, enable: false); CFMachPortInvalidate(t) }
+        if let src, let loop = tapLoop { CFRunLoopRemoveSource(loop, src, .commonModes) }
+        NSLog("Visor: media key tap removed (Accessibility not granted)")
+    }
 
-    /// Returns true when the event was handled and should be swallowed.
+    /// macOS disabled the tap (it was slow, or the user/permissions intervened).
+    /// Only switch it back on if we're still trusted; otherwise get out of the input path.
+    fileprivate func tapWasDisabled() {
+        guard AXIsProcessTrusted() else { return removeTap() }
+        lock.lock(); let t = tap; lock.unlock()
+        if let t { CGEvent.tapEnable(tap: t, enable: true) }
+    }
+
+    /// Returns true when the event was handled and should be swallowed. Runs on the tap thread:
+    /// keep it quick, and hop to main for UI.
     fileprivate func handle(_ event: CGEvent) -> Bool {
         guard let ns = NSEvent(cgEvent: event), ns.type == .systemDefined, ns.subtype.rawValue == 8,
               let key = Key(rawValue: (ns.data1 & 0xFFFF_0000) >> 16) else { return false }
@@ -41,6 +83,7 @@ final class MediaKeys {
         let fine = ns.modifierFlags.contains([.shift, .option])
         let step: Float = fine ? 1 / 64 : 1 / 16
 
+        let hud: HUD
         switch key {
         case .soundUp, .soundDown, .mute:
             guard SystemVolume.canSet else { return false }
@@ -52,21 +95,22 @@ final class MediaKeys {
                 SystemVolume.volume += key == .soundUp ? step : -step
             }
             let v = SystemVolume.volume
-            NotchState.shared.showHUD(HUD(kind: SystemVolume.muted || v == 0 ? .muted : .volume, level: SystemVolume.muted ? 0 : v))
+            hud = HUD(kind: SystemVolume.muted || v == 0 ? .muted : .volume, level: SystemVolume.muted ? 0 : v)
         case .brightnessUp, .brightnessDown:
             guard let b = Brightness.value else { return false }
             guard isDown else { return true }
             let nb = min(max(b + (key == .brightnessUp ? step : -step), 0), 1)
             Brightness.value = nb
-            NotchState.shared.showHUD(HUD(kind: .brightness, level: nb))
+            hud = HUD(kind: .brightness, level: nb)
         }
+        DispatchQueue.main.async { NotchState.shared.showHUD(hud) }
         return true
     }
 }
 
 private let tapCallback: CGEventTapCallBack = { _, type, event, _ in
     if type == .tapDisabledByTimeout || type == .tapDisabledByUserInput {
-        MediaKeys.shared.reenable()
+        MediaKeys.shared.tapWasDisabled()
         return Unmanaged.passUnretained(event)
     }
     return MediaKeys.shared.handle(event) ? nil : Unmanaged.passUnretained(event)
