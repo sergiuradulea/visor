@@ -18,6 +18,8 @@ final class MediaModel: ObservableObject {
     private var timestamp = Date()
     private var rate = 1.0
     private var process: Process?
+    private var startedAt = Date()
+    private var quickExits = 0
     private var buffer = Data()
 
     private let helper = Bundle.main.bundleURL
@@ -34,6 +36,7 @@ final class MediaModel: ObservableObject {
     }
 
     func start() {
+        startedAt = Date()
         let p = Process()
         p.executableURL = helper
         p.arguments = ["stream"]
@@ -45,9 +48,17 @@ final class MediaModel: ObservableObject {
             DispatchQueue.main.async { self?.consume(chunk) }
         }
         p.terminationHandler = { [weak self] _ in
-            DispatchQueue.main.asyncAfter(deadline: .now() + 2) { self?.start() }
+            DispatchQueue.main.async { self?.restartAfterExit() }
         }
         do { try p.run(); process = p } catch { NSLog("Visor: media helper failed: \(error)") }
+    }
+
+    /// Relaunch a crashed helper, but give up if it keeps dying right away (e.g. a macOS update
+    /// removed a private MediaRemote function) instead of respawning it every 2 s forever.
+    private func restartAfterExit() {
+        quickExits = Date().timeIntervalSince(startedAt) < 10 ? quickExits + 1 : 0
+        guard quickExits < 3 else { return NSLog("Visor: media helper keeps exiting; now playing disabled") }
+        DispatchQueue.main.asyncAfter(deadline: .now() + 2) { [weak self] in self?.start() }
     }
 
     private func consume(_ chunk: Data) {
@@ -103,13 +114,14 @@ final class MediaModel: ObservableObject {
 }
 
 extension NSImage {
+    private static let ciContext = CIContext() // expensive to create; reuse across tracks
     /// Average colour of the artwork, lifted so it reads on black.
     var accentColor: Color? {
         guard let tiff = tiffRepresentation, let ci = CIImage(data: tiff),
               let f = CIFilter(name: "CIAreaAverage", parameters: [kCIInputImageKey: ci, kCIInputExtentKey: CIVector(cgRect: ci.extent)]),
               let out = f.outputImage else { return nil }
         var px = [UInt8](repeating: 0, count: 4)
-        CIContext().render(out, toBitmap: &px, rowBytes: 4, bounds: CGRect(x: 0, y: 0, width: 1, height: 1),
+        Self.ciContext.render(out, toBitmap: &px, rowBytes: 4, bounds: CGRect(x: 0, y: 0, width: 1, height: 1),
                            format: .RGBA8, colorSpace: CGColorSpaceCreateDeviceRGB())
         let c = NSColor(red: CGFloat(px[0]) / 255, green: CGFloat(px[1]) / 255, blue: CGFloat(px[2]) / 255, alpha: 1)
         return Color(nsColor: NSColor(hue: c.hueComponent, saturation: min(c.saturationComponent * 1.3, 1),

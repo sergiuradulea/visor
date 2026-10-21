@@ -113,10 +113,10 @@ enum Screenshots {
 
         let now = Date()
         ClipboardStore.shared.clips = [
-            Clip(date: now.addingTimeInterval(-40), text: "https://github.com/your-name/visor"),
+            Clip(date: now.addingTimeInterval(-40), text: "https://github.com/sergiuradulea/visor"),
             Clip(date: now.addingTimeInterval(-300), text: "Meet at 7 by the north entrance?"),
-            Clip(date: now.addingTimeInterval(-900), text: "brew install --cask visor"),
-            Clip(date: now.addingTimeInterval(-3600), png: art.tiffRepresentation.flatMap { NSBitmapImageRep(data: $0)?.representation(using: .png, properties: [:]) }),
+            Clip(date: now.addingTimeInterval(-900), text: "./build.sh && open build/Visor.app"),
+            Clip(date: now.addingTimeInterval(-3600), thumb: art.tiffRepresentation.flatMap { ClipboardStore.encode($0)?.thumb }),
             Clip(date: now.addingTimeInterval(-7200), text: "Thanks! Sending the files over now."),
         ]
     }

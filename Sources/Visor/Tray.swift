@@ -1,6 +1,5 @@
 import AppKit
 import SwiftUI
-import UniformTypeIdentifiers
 
 /// Files parked in the notch / basket. Holds references (URLs), never copies.
 final class TrayStore: ObservableObject {
@@ -15,8 +14,12 @@ final class TrayStore: ObservableObject {
             .filter { FileManager.default.fileExists(atPath: $0.path) }
     }
 
+    static let maxItems = 50 // screenshots and downloads auto-add, so the tray must not grow forever
+
     func add(_ url: URL) {
-        if !items.contains(url) { items.append(url) }
+        guard !items.contains(url) else { return }
+        items.append(url)
+        if items.count > Self.maxItems { items.removeFirst(items.count - Self.maxItems) }
     }
 
     private var screenshotQuery: NSMetadataQuery?
@@ -31,7 +34,7 @@ final class TrayStore: ObservableObject {
             let added = n.userInfo?[NSMetadataQueryUpdateAddedItemsKey] as? [NSMetadataItem] ?? []
             for item in added {
                 guard let path = item.value(forAttribute: NSMetadataItemPathKey) as? String,
-                      URL(fileURLWithPath: path).deletingLastPathComponent().standardizedFileURL.path == Self.screenshotFolder.path else { continue }
+                      Self.isDirectlyInside(path, Self.screenshotFolder) else { continue }
                 self?.add(URL(fileURLWithPath: path))
                 NotchState.shared.showHUD(HUD(kind: .screenshot, level: 0))
             }
@@ -42,6 +45,11 @@ final class TrayStore: ObservableObject {
         let folder = Self.screenshotFolder
         DispatchQueue.global(qos: .utility).async { _ = try? FileManager.default.contentsOfDirectory(atPath: folder.path) }
         screenshotQuery = q
+    }
+
+    /// True only for files directly in `folder`, not in subfolders (security check, see SECURITY.md).
+    static func isDirectlyInside(_ path: String, _ folder: URL) -> Bool {
+        URL(fileURLWithPath: path).deletingLastPathComponent().standardizedFileURL.path == folder.standardizedFileURL.path
     }
 
     /// Where macOS saves screenshots (Screenshot app → Options → Save to); Desktop by default.

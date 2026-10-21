@@ -375,7 +375,7 @@ struct TrayView: View {
             } else {
                 VStack(alignment: .leading, spacing: 8) {
                     ScrollView(.horizontal, showsIndicators: false) {
-                        HStack(spacing: 6) {
+                        LazyHStack(spacing: 6) {
                             ForEach(tray.items, id: \.self) { TrayItem(url: $0).transition(.scale.combined(with: .opacity)) }
                         }
                         .padding(.horizontal, 4).padding(.top, 6)
@@ -497,7 +497,7 @@ private struct ClipRow: View {
 
     var body: some View {
         HStack(spacing: 10) {
-            Image(systemName: copied ? "checkmark" : clip.text != nil ? "text.alignleft" : "photo")
+            Image(systemName: copied ? "checkmark" : clip.isImage ? "photo" : "text.alignleft")
                 .font(.system(size: 11, weight: .semibold))
                 .foregroundStyle(copied ? .green : .white.opacity(0.4))
                 .frame(width: 16)
@@ -505,7 +505,7 @@ private struct ClipRow: View {
             if let text = clip.text {
                 Text(text.trimmingCharacters(in: .whitespacesAndNewlines).replacingOccurrences(of: "\n", with: " "))
                     .lineLimit(1).font(.system(size: 12.5))
-            } else if let png = clip.png, let img = NSImage(data: png) {
+            } else if let thumb = clip.thumb, let img = NSImage(data: thumb) {
                 Image(nsImage: img).resizable().aspectRatio(contentMode: .fit).frame(height: 34)
                     .clipShape(RoundedRectangle(cornerRadius: 5))
             }

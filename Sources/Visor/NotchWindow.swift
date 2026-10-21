@@ -58,7 +58,8 @@ final class NotchController {
     private let state = NotchState.shared
     private let panelSize = CGSize(width: 720, height: 320) // room for the shadow
     private(set) var panel: NotchPanel!
-    private var screen: NSScreen { NSScreen.screens.first { $0.safeAreaInsets.top > 0 } ?? NSScreen.main! }
+    /// Set in layout(). nil for a moment when no display is connected (lid closed, monitor unplugged).
+    private var screen: NSScreen?
 
     func start() {
         panel = NotchPanel(contentRect: .zero, styleMask: [.borderless, .nonactivatingPanel], backing: .buffered, defer: false)
@@ -74,19 +75,21 @@ final class NotchController {
         NotificationCenter.default.addObserver(forName: NSApplication.didChangeScreenParametersNotification, object: nil, queue: .main) { [weak self] _ in self?.layout() }
         // Polling the pointer is simpler and more reliable than event monitors:
         // it keeps working during file drags owned by other apps.
-        Timer.scheduledTimer(withTimeInterval: 0.05, repeats: true) { [weak self] _ in self?.tick() }
+        let timer = Timer.scheduledTimer(withTimeInterval: 0.05, repeats: true) { [weak self] _ in self?.tick() }
+        timer.tolerance = 0.02 // lets macOS batch these wakeups with others
         NotificationCenter.default.addObserver(forName: NSMenu.didBeginTrackingNotification, object: nil, queue: .main) { [weak self] _ in self?.state.menuOpen = true }
         NotificationCenter.default.addObserver(forName: NSMenu.didEndTrackingNotification, object: nil, queue: .main) { [weak self] _ in self?.state.menuOpen = false }
         // A click anywhere else ends note editing and closes the notch.
         NSEvent.addGlobalMonitorForEvents(matching: [.leftMouseDown, .rightMouseDown]) { [weak self] _ in
-            guard let self, state.expanded, !rect(state.shapeSize).contains(NSEvent.mouseLocation) else { return }
+            guard let self, state.expanded, rect(state.shapeSize)?.contains(NSEvent.mouseLocation) == false else { return }
             panel.makeFirstResponder(nil)
             state.expanded = false
         }
     }
 
     private func layout() {
-        let s = screen
+        screen = NSScreen.screens.first { $0.safeAreaInsets.top > 0 } ?? NSScreen.main
+        guard let s = screen else { return }
         if s.safeAreaInsets.top > 0, let l = s.auxiliaryTopLeftArea, let r = s.auxiliaryTopRightArea {
             state.notchSize = CGSize(width: s.frame.width - l.width - r.width, height: s.safeAreaInsets.top)
         } else {
@@ -96,23 +99,26 @@ final class NotchController {
                               width: panelSize.width, height: panelSize.height), display: true)
     }
 
-    private func rect(_ size: CGSize) -> NSRect {
-        let f = screen.frame
+    private func rect(_ size: CGSize) -> NSRect? {
+        guard let f = screen?.frame else { return nil }
         return NSRect(x: f.midX - size.width / 2, y: f.maxY - size.height, width: size.width, height: size.height)
     }
 
     private func tick() {
+        guard let shape = rect(state.shapeSize) else { return }
         let mouse = NSEvent.mouseLocation
         if !state.expanded {
-            if rect(state.shapeSize).insetBy(dx: -4, dy: -4).contains(mouse) {
+            if shape.insetBy(dx: -4, dy: -4).contains(mouse) {
                 if Self.isDraggingFiles { state.tab = .tray }
                 state.expanded = true
                 NSHapticFeedbackManager.defaultPerformer.perform(.alignment, performanceTime: .now)
             }
-        } else if !state.menuOpen, !isEditingNote, !rect(state.shapeSize).insetBy(dx: -12, dy: -12).contains(mouse) {
+        } else if !state.menuOpen, !isEditingNote, !shape.insetBy(dx: -12, dy: -12).contains(mouse) {
             state.expanded = false
         }
-        panel.ignoresMouseEvents = !rect(state.shapeSize).contains(mouse)
+        // Each assignment is a window-server call; only make it when the value flips.
+        let ignore = !(rect(state.shapeSize) ?? shape).contains(mouse)
+        if panel.ignoresMouseEvents != ignore { panel.ignoresMouseEvents = ignore }
     }
 
     /// While typing a note the notch stays open even if the pointer drifts away.

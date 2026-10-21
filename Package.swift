@@ -7,5 +7,6 @@ let package = Package(
     targets: [
         .executableTarget(name: "Visor"),
         .executableTarget(name: "VisorMedia"),
+        .testTarget(name: "VisorTests", dependencies: ["Visor"]),
     ]
 )
