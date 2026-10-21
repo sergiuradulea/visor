@@ -5,13 +5,14 @@
 # Visor
 
 **Your MacBook notch, put to work.**
-Now playing, a file tray, quick notes, clipboard history, live downloads and a cleaner volume/brightness HUD, all in the notch.
+A home dashboard (battery, AirPods, CPU, memory, Claude Code agents and limits), now playing, a file tray, quick notes, clipboard history, live downloads and a cleaner volume/brightness HUD, all in the notch.
 
 ![Visor music player](docs/screenshots/music.png)
 
-Native Swift + SwiftUI · ~1.5k lines · no dependencies · no network · macOS 14+
+Native Swift + SwiftUI · ~2.1k lines · no dependencies · offline by default · macOS 14+
 
 <a href="https://ponytail.dev"><img src="https://img.shields.io/badge/built%20with-ponytail-111111?style=flat-square" alt="Built with Ponytail"></a>
+<a href="https://buymeacoffee.com/sergiuradulea"><img src="https://img.shields.io/badge/buy%20me%20a%20coffee-FFDD00?style=flat-square&logo=buymeacoffee&logoColor=black" alt="Buy me a coffee"></a>
 <img src="https://img.shields.io/badge/macOS-14%2B-111111?style=flat-square" alt="macOS 14+">
 <img src="https://img.shields.io/badge/license-MIT-111111?style=flat-square" alt="MIT license">
 
@@ -21,10 +22,11 @@ Native Swift + SwiftUI · ~1.5k lines · no dependencies · no network · macOS 
 
 ## Features
 
-Hover the notch to open it. Everything lives in four tabs along the bottom.
+Hover the notch to open it. Everything lives in five tabs along the bottom.
 
 | | |
 |---|---|
+| ![Home](docs/screenshots/home.png) | **🏠 Home**<br>Your Mac at a glance: battery and time left, CPU, memory, and the battery of connected AirPods (left, right, case), keyboards and mice. On the right, every **Claude Code agent** running on this Mac (busy or idle) and, if you turn it on, your **Claude plan limits** (5-hour and weekly, with reset times). Only refreshes while the tab is open. |
 | ![Music](docs/screenshots/music.png) | **🎵 Music**<br>Artwork, title, artist, a seekable progress bar and playback controls for whatever is playing (Music, Spotify, browsers, anything that shows up in Control Center). Colours are pulled from the album art. While something plays, the closed notch shows the artwork and a live visualizer. |
 | ![Tray](docs/screenshots/tray.png) | **📥 Tray**<br>Drag files onto the notch to park them, then drag them out wherever you need them. Right-click a file to Open, Show in Finder, AirDrop, Share, Copy or Copy Path. **New screenshots and finished downloads land here automatically.** Screenshots are picked up from whichever folder you save them to (Cmd+Shift+5 → Options → Save to), so there's nothing to configure. |
 | ![Notes](docs/screenshots/notes.png) | **📝 Notes**<br>A scratchpad that saves as you type. The notch stays open while you're typing and closes when you click elsewhere. |
@@ -81,6 +83,10 @@ Then grant the permissions it asks for. macOS shows each prompt the first time a
 | **Accessibility** | To catch the volume and brightness keys and show Visor's HUD instead of the system one | Keys work as normal, with no custom HUD |
 | **Downloads folder** | To see download progress and add finished files to the tray | No live downloads |
 | **Desktop folder** (only if screenshots save there, the macOS default) | To add new screenshots to the tray | Screenshots aren't added |
+| **Bluetooth** | To read AirPods, keyboard and mouse battery levels on the Home tab | Device batteries aren't shown |
+| **Keychain: "Claude Code-credentials"** (opt-in, only if you click *Show plan limits*) | To read your Claude Code login and fetch your plan limits from Anthropic. Note that this keychain item also contains your Claude Code connector logins (Slack, Notion and so on); Visor ignores them, but the permission covers the whole item. | No limits shown; everything else works |
+
+> **Only use Claude Code inside the Claude desktop app?** The desktop app keeps its login to itself, so sign in to the command-line Claude Code once for the limits to work: run `claude` in Terminal, type `/login`, choose your Claude account, then `/exit`.
 
 To start Visor at login, right-click the notch and choose **Open at Login**. **Quit** is in the same menu.
 
@@ -176,6 +182,7 @@ tccutil reset All io.github.visor
 | Tray | References to your files (paths), never copies. Drag out uses standard file providers. |
 | Screenshots | A Spotlight query for `kMDItemIsScreenCapture`, limited to your screenshot folder. |
 | Downloads | Subscribes to the `NSProgress` objects browsers publish for files in `~/Downloads`, the same mechanism behind Finder's progress bars. |
+| Home | Battery from the IOKit power-source API, CPU and memory from `host_statistics`, device batteries from `system_profiler SPBluetoothDataType` (once a minute). Agents from the `~/.claude/sessions/*.json` files Claude Code keeps up to date. Limits (opt-in) from `api.anthropic.com/api/oauth/usage`, the same call Claude Code's `/usage` makes. |
 | Clipboard | Polls `NSPasteboard.changeCount`, as macOS has no change notification, and skips [concealed/transient](http://nspasteboard.org) items. |
 
 ```
@@ -193,7 +200,7 @@ docs/screenshots/       generated by: swift run -c release Visor --screenshots d
 
 ## Privacy & security
 
-- **No network access.** Visor makes no outgoing connections: no analytics, no update checks.
+- **Offline by default.** Visor makes no outgoing connections: no analytics, no update checks. The one exception is the opt-in **Claude plan limits** on the Home tab. Once you turn it on, Visor reads your Claude Code login from the keychain (macOS asks you first) and sends it to `api.anthropic.com` every 5 minutes while the Home tab is open. Nothing else is sent, and the login is never stored, logged or refreshed. Turn it off by right-clicking the Home tab → *Hide Plan Limits*.
 - **Your data stays local:**
   - Clipboard history: `~/Library/Application Support/Visor/clipboard.json`, excluded from Time Machine.
   - Notes and the tray list: in the app's preferences.
@@ -210,6 +217,10 @@ Built and reviewed with [Ponytail](https://ponytail.dev), the "laziest senior de
 
 
 Inspired by notch utilities like [Droppy](https://getdroppy.app), [boring.notch](https://github.com/TheBoredTeam/boring.notch) and NotchDrop. Visor is an independent, from-scratch implementation; no code or assets are taken from other apps.
+
+## Support
+
+Visor is free and open source. If it makes your day a little easier, you can [buy me a coffee ☕](https://buymeacoffee.com/sergiuradulea). Bug reports and ideas in [Issues](https://github.com/sergiuradulea/visor/issues) are just as welcome.
 
 ## License
 
