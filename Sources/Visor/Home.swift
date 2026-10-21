@@ -216,6 +216,7 @@ final class ClaudeLimits: ObservableObject {
         guard let (data, response) = try? await session.data(for: request, delegate: NoRedirects()),
               let http = response as? HTTPURLResponse else { return .failure(Failure(text: "Couldn't reach Anthropic.")) }
         guard http.statusCode == 200 else {
+            if http.statusCode == 401 { cachedToken = nil } // revoked or renewed elsewhere: read the keychain again next time
             return .failure(http.statusCode == 401 ? .expired : Failure(text: "Anthropic answered \(http.statusCode). Try again later."))
         }
         guard let usage = parse(data) else { return .failure(Failure(text: "Unexpected answer from Anthropic.")) }
@@ -227,8 +228,15 @@ final class ClaudeLimits: ObservableObject {
     /// The token lasts 8 hours and only Claude Code renews it, which the desktop app doesn't do.
     /// So when it has expired, let Claude Code itself renew it (`claude auth status`), then read it again.
     /// Visor never calls the renewal endpoint or writes the keychain.
+    /// Kept in memory (never on disk) so the keychain, and its macOS prompt, is only touched
+    /// when the token is missing, about to expire or rejected: about once per 8 hours, not every 5 minutes.
+    /// Only the fetch task touches it, and fetches never overlap (`fetching`).
+    private static var cachedToken: (value: String, expires: Date?)?
+
     private static func validToken(renew: Bool = true) -> Result<(value: String, expires: Date?), Failure> {
+        if let cached = cachedToken, (cached.expires ?? .distantFuture) > Date().addingTimeInterval(60) { return .success(cached) }
         let result = readToken()
+        if case let .success(token) = result { cachedToken = token }
         guard case let .success(token) = result, let expires = token.expires, expires < Date().addingTimeInterval(60) else { return result }
         guard renew, runClaudeAuthStatus() else { return .failure(.expired) }
         return validToken(renew: false)
