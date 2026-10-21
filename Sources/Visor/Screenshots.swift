@@ -14,6 +14,7 @@ enum Screenshots {
         let samples = FileManager.default.temporaryDirectory.appendingPathComponent("visor-samples", isDirectory: true)
         seedDemoData(samples, cover: coverFile.flatMap { NSImage(contentsOf: $0) })
 
+        HomeView.live = false // keep the demo numbers, don't read this Mac's
         let state = NotchState.shared
         state.notchSize = CGSize(width: 190, height: 32)
         let wide = CGSize(width: 1000, height: 330), strip = CGSize(width: 1000, height: 96)
@@ -112,6 +113,21 @@ enum Screenshots {
             """])
 
         let now = Date()
+        let stats = SystemStats.shared
+        stats.battery = .init(percent: 78, charging: false, pluggedIn: false, minutesLeft: 312)
+        stats.cpu = 0.23
+        stats.memoryUsed = stats.memoryTotal * 0.58
+        stats.devices = [.init(name: "AirPods Pro", levels: [.init(part: "Left", percent: 82), .init(part: "Right", percent: 79),
+                                                             .init(part: "Case", percent: 45)]),
+                         .init(name: "Magic Keyboard", levels: [.init(part: "", percent: 64)])]
+        UserDefaults.standard.register(defaults: ["claudeLimitsEnabled": true])
+        ClaudeLimits.shared.fiveHour = .init(percent: 37, resetsAt: now.addingTimeInterval(2 * 3600 + 900))
+        ClaudeLimits.shared.weekly = .init(percent: 64, resetsAt: now.addingTimeInterval(3 * 86400))
+        ClaudeAgents.shared.sessions = [
+            .init(id: "1", name: "Add dark mode", project: "website", busy: true, started: now.addingTimeInterval(-1500)),
+            .init(id: "2", name: "Fix flaky tests", project: "api", busy: true, started: now.addingTimeInterval(-600)),
+            .init(id: "3", name: "Release notes", project: "visor", busy: false, started: now.addingTimeInterval(-5400)),
+        ]
         ClipboardStore.shared.clips = [
             Clip(date: now.addingTimeInterval(-40), text: "https://github.com/sergiuradulea/visor"),
             Clip(date: now.addingTimeInterval(-300), text: "Meet at 7 by the north entrance?"),

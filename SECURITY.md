@@ -18,8 +18,11 @@ Visor runs as you, unsandboxed, and may hold **Accessibility** and **Downloads f
 | **Screenshot auto-add** | Spotlight's `kMDItemIsScreenCapture` tag, which any app can set. | Only files directly inside the configured screenshot folder are accepted. |
 | **Download auto-add** | `NSProgress` publications for files in `~/Downloads`. | Only adds a reference to a file that already exists in Downloads. Nothing is opened or sent without a click. |
 | **Private APIs** | MediaRemote, DisplayServices and SkyLight, resolved with `dlsym`. | Missing symbols are handled: the feature turns off rather than crashing. |
-| **Network** | None. | No sockets, no update checks, no telemetry. |
-| **Process execution** | Launches only its own bundled helper, with fixed arguments and no shell. | Commands are numeric and no input is interpolated. |
+| **Network** | None by default. With the opt-in Claude plan limits on: one HTTPS `GET https://api.anthropic.com/api/oauth/usage` every 5 minutes, only while the Home tab is visible. | No update checks or telemetry. Ephemeral session (no cookies or cache on disk). Redirects are refused so the token can't be forwarded to another host. |
+| **Claude Code login** (opt-in) | Reads the `Claude Code-credentials` keychain item to get the access token for the request above. macOS asks before allowing this. **That item also holds the access tokens of your Claude Code connectors (Slack, Notion, Figma and so on), so allowing it lets Visor read those too.** Visor uses only the `claudeAiOauth` entry and drops the rest without looking at it. When the token has expired (it lasts 8 hours), Visor runs Claude Code's own `claude auth status` so Claude Code can renew it. | Tokens stay in memory for one request only: never written, logged or shown. Visor never calls the renewal endpoint or writes to the keychain, so it can't sign you out of Claude Code. If you'd rather not grant this, leave the limits off; nothing else needs it. Off by default. |
+| **Claude Code sessions** | Reads `~/.claude/sessions/*.json` (name, project folder, busy/idle) to list running agents. | Read-only. The `.key` files in that folder are never opened. |
+| **Bluetooth batteries** | Runs Apple's `/usr/sbin/system_profiler SPBluetoothDataType -json` once a minute while Home is visible. | Fixed path and arguments, no shell. Only battery levels and device names are used. |
+| **Process execution** | Launches only its own bundled helper, Apple's `system_profiler`, and (opt-in limits only) Claude Code's `claude auth status`, all with fixed paths and arguments and no shell. | Commands are numeric and no input is interpolated. |
 
 ## Not in scope
 

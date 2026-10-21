@@ -29,7 +29,7 @@ $4
 </dict></plist>
 EOF
 }
-plist io.github.visor Visor Visor "<key>CFBundleIconFile</key><string>visor</string><key>CFBundleIconName</key><string>visor</string><key>NSDownloadsFolderUsageDescription</key><string>Visor shows downloads in progress in the notch and adds finished ones to the tray.</string><key>NSDesktopFolderUsageDescription</key><string>Visor adds new screenshots saved to your Desktop to the tray.</string><key>NSDocumentsFolderUsageDescription</key><string>Visor adds new screenshots saved to your Documents folder to the tray.</string>" > $APP/Contents/Info.plist
+plist io.github.visor Visor Visor "<key>CFBundleIconFile</key><string>visor</string><key>CFBundleIconName</key><string>visor</string><key>NSBluetoothAlwaysUsageDescription</key><string>Visor shows the battery level of your AirPods, keyboard and mouse.</string><key>NSDownloadsFolderUsageDescription</key><string>Visor shows downloads in progress in the notch and adds finished ones to the tray.</string><key>NSDesktopFolderUsageDescription</key><string>Visor adds new screenshots saved to your Desktop to the tray.</string><key>NSDocumentsFolderUsageDescription</key><string>Visor adds new screenshots saved to your Documents folder to the tray.</string>" > $APP/Contents/Info.plist
 # The com.apple. prefix is what lets MediaRemote answer on macOS 15.4+.
 plist com.apple.controlcenter.VisorMedia VisorMedia VisorMedia "" > $HELPER/Contents/Info.plist
 

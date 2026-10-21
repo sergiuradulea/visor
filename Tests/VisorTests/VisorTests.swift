@@ -31,4 +31,34 @@ final class VisorTests: XCTestCase {
         XCTAssertLessThanOrEqual(max(thumb.pixelsWide, thumb.pixelsHigh), 160)
         XCTAssertEqual(full.pixelsWide, 1200)
     }
+
+    /// Same shape as the files Claude Code writes to ~/.claude/sessions.
+    func testClaudeSessionFile() throws {
+        let json = #"{"pid":1330,"sessionId":"abc","cwd":"/Users/me/code/visor","startedAt":1792586186121,"name":"Notch app","status":"busy"}"#
+        let s = try XCTUnwrap(ClaudeAgents.parse(Data(json.utf8), isAlive: { _ in true }))
+        XCTAssertEqual(s.name, "Notch app")
+        XCTAssertEqual(s.project, "visor")
+        XCTAssertTrue(s.busy)
+        XCTAssertNil(ClaudeAgents.parse(Data(json.utf8), isAlive: { _ in false }), "dead sessions are hidden")
+        let noName = #"{"pid":1,"cwd":"/x/api","status":"idle"}"#
+        XCTAssertEqual(ClaudeAgents.parse(Data(noName.utf8), isAlive: { _ in true })?.name, "api")
+    }
+
+    func testClaudeLimitsParsing() throws {
+        let iso = #"{"five_hour":{"utilization":42.4,"resets_at":"2026-10-21T18:00:00.123456+00:00"},"seven_day":{"utilization":130,"resets_at":1792800000}}"#
+        let (five, week) = try XCTUnwrap(ClaudeLimits.parse(Data(iso.utf8)))
+        XCTAssertEqual(five?.percent, 42.4)
+        XCTAssertEqual(five?.resetsAt, ISO8601DateFormatter().date(from: "2026-10-21T18:00:00Z"))
+        XCTAssertEqual(week?.percent, 100, "clamped")
+        XCTAssertEqual(week?.resetsAt, Date(timeIntervalSince1970: 1792800000))
+        XCTAssertNil(ClaudeLimits.parse(Data("not json".utf8)))
+    }
+
+    func testBluetoothBatteryParsing() {
+        let json = #"{"SPBluetoothDataType":[{"device_connected":[{"Sergiu's AirPods Pro":{"device_batteryLevelCase":"40%","device_batteryLevelLeft":"80%","device_batteryLevelRight":"75%"}},{"Magic Keyboard":{"device_batteryLevelMain":"12%"}},{"Speaker":{"device_minorType":"Speaker"}}]}]}"#
+        let devices = SystemStats.parseBluetooth(Data(json.utf8))
+        XCTAssertEqual(devices.map(\.name), ["Magic Keyboard", "Sergiu's AirPods Pro"], "devices without a battery are skipped")
+        XCTAssertEqual(devices[1].levels.map(\.part), ["Left", "Right", "Case"])
+        XCTAssertEqual(devices[0].levels, [.init(part: "", percent: 12)])
+    }
 }

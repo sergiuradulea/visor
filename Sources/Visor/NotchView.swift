@@ -220,6 +220,7 @@ struct ExpandedView: View {
         VStack(spacing: 10) {
             ZStack {
                 switch state.tab {
+                case .home: HomeView().transition(.tab)
                 case .music: MusicView(ns: ns).transition(.tab)
                 case .tray: TrayView().transition(.tab)
                 case .notes: NotesView().transition(.tab)
@@ -238,7 +239,7 @@ private struct TabBar: View {
     @ObservedObject var state = NotchState.shared
     @ObservedObject var media = MediaModel.shared
     @Namespace private var tabs
-    private let icons: [NotchState.Tab: String] = [.music: "music.note", .tray: "tray.full", .notes: "square.and.pencil", .clipboard: "doc.on.clipboard"]
+    private let icons: [NotchState.Tab: String] = [.home: "house", .music: "music.note", .tray: "tray.full", .notes: "square.and.pencil", .clipboard: "doc.on.clipboard"]
 
     var body: some View {
         HStack(spacing: 2) {

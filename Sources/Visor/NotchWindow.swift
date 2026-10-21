@@ -9,10 +9,10 @@ struct HUD: Equatable {
 
 final class NotchState: ObservableObject {
     static let shared = NotchState()
-    enum Tab: String, CaseIterable { case music, tray, notes, clipboard }
+    enum Tab: String, CaseIterable { case home, music, tray, notes, clipboard }
 
     @Published var expanded = false
-    @Published var tab: Tab = .music
+    @Published var tab: Tab = .home
     @Published var hud: HUD?
     @Published var notchSize = CGSize(width: 200, height: 32)
     var menuOpen = false // context menu / share picker showing: don't collapse under it
